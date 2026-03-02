@@ -4,7 +4,7 @@ import pandas as pd
 st.set_page_config(page_title="Harga Lelang Kendaraan", layout="wide")
 
 # Per kendaraan (1 baris unik per kombinasi ini)
-GROUP_COLS = ["Merk", "ModelName", "Tipe", "Tahun", "Wilayah", "kilometer2"]
+GROUP_COLS = ["Tipe", "Tahun", "Wilayah", "kilometer2"]
 
 # ==============================
 # LOAD DATA
