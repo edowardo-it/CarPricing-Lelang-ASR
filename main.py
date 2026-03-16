@@ -155,8 +155,8 @@ st.markdown(f"**Model = {selected_model}**")
 df_show = df_grouped.rename(columns={"kilometer2": "Kilometer"})
 
 # Kolom yang ditampilkan (ringkas)
-df_show = df_show[["Tipe", "Tahun", "Wilayah", "Kilometer", "Min_fmt", "Avg_fmt", "Max_fmt", "TotalUnitTerjual"]]
-df_show = df_show.rename(columns={"Min_fmt": "Min", "Avg_fmt": "Avg", "Max_fmt": "Max"})
+df_show = df_show[["Tipe", "Tahun", "Wilayah", "Kilometer", "Avg_fmt", "TotalUnitTerjual"]]
+df_show = df_show.rename(columns={"Avg_fmt": "Avg"})
 
 df_show = df_show.sort_values(["Tipe", "Tahun", "Wilayah", "Kilometer"], ascending=True)
 
