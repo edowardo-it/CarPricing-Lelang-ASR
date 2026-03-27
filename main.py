@@ -4,7 +4,7 @@ import pandas as pd
 st.set_page_config(page_title="Harga Lelang Kendaraan", layout="wide")
 
 # Per kendaraan (1 baris unik per kombinasi ini)
-GROUP_COLS = ["Tipe", "Tahun", "KodeDaerah", "lokasi","kilometer2"]
+GROUP_COLS = ["Tipe", "Tahun", "KodeDaerah", "lokasi", "kilometer2"]
 
 # ==============================
 # HELPERS
@@ -64,7 +64,7 @@ def load_data(path: str) -> pd.DataFrame:
     df["Tahun"] = pd.to_numeric(df["Tahun"], errors="coerce").astype("Int64")
 
     # Trim string
-    for c in ["Merk", "ModelName", "Tipe", "KodeDaerah", "lokasi", "kilometer2"]:
+    for c in ["Merk", "ModelName", "Tipe", "KodeDaerah", "lokasi", "kilometer2", "Transmisi"]:
         if c in df.columns:
             df[c] = df[c].astype(str).str.strip()
 
@@ -85,40 +85,41 @@ df = load_data("CarMap.csv")
 st.sidebar.header("Filter")
 
 merk_list = sorted(df["Merk"].dropna().unique().tolist())
-selected_merk = st.sidebar.selectbox("Merk", options=merk_list)
+selected_merk = st.sidebar.selectbox("Merk", options=merk_list, key="merk")
 df1 = df[df["Merk"] == selected_merk]
 
 model_list = sorted(df1["ModelName"].dropna().unique().tolist())
-selected_model = st.sidebar.selectbox("ModelName", options=model_list)
+selected_model = st.sidebar.selectbox("ModelName", options=model_list, key="model")
 df2 = df1[df1["ModelName"] == selected_model]
 
 tipe_list = sorted(df2["Tipe"].dropna().unique().tolist())
 selected_tipe = st.sidebar.multiselect(
     "Tipe",
     options=tipe_list,
-    default=tipe_list[:1] if tipe_list else []
+    default=[],   # tidak auto select
+    key="tipe"
 )
 df3 = df2[df2["Tipe"].isin(selected_tipe)] if selected_tipe else df2
 
 tahun_list = sorted(df3["Tahun"].dropna().astype(int).unique().tolist())
-selected_tahun = st.sidebar.selectbox("Tahun", options=["ALL"] + tahun_list)
+selected_tahun = st.sidebar.selectbox("Tahun", options=["ALL"] + tahun_list, key="tahun")
 df4 = df3 if selected_tahun == "ALL" else df3[df3["Tahun"] == int(selected_tahun)]
 
 transmisi_list = sorted(df4["Transmisi"].dropna().unique().tolist())
-selected_transmisi = st.sidebar.selectbox("Transmisi", options=["ALL"] + transmisi_list)
+selected_transmisi = st.sidebar.selectbox("Transmisi", options=["ALL"] + transmisi_list, key="transmisi")
 df5 = df4 if selected_transmisi == "ALL" else df4[df4["Transmisi"] == selected_transmisi]
 
 kode_daerah_list = sorted(df5["KodeDaerah"].dropna().unique().tolist())
-selected_kodeDaerah = st.sidebar.selectbox("KodeDaerah", options=["ALL"] + kode_daerah_list)
+selected_kodeDaerah = st.sidebar.selectbox("KodeDaerah", options=["ALL"] + kode_daerah_list, key="kode_daerah")
 df6 = df5 if selected_kodeDaerah == "ALL" else df5[df5["KodeDaerah"] == selected_kodeDaerah]
 
 lokasi_list = sorted(df6["lokasi"].dropna().unique().tolist())
-selected_lokasi = st.sidebar.selectbox("lokasi", options=["ALL"] + lokasi_list)
-df6 = df5 if selected_lokasi == "ALL" else df5[df5["lokasi"] == selected_lokasi]
+selected_lokasi = st.sidebar.selectbox("lokasi", options=["ALL"] + lokasi_list, key="lokasi")
+df7 = df6 if selected_lokasi == "ALL" else df6[df6["lokasi"] == selected_lokasi]
 
-km_list = sorted(df6["kilometer2"].dropna().unique().tolist())
-selected_km = st.sidebar.selectbox("Kilometer", options=["ALL"] + km_list)
-df_filtered = df6 if selected_km == "ALL" else df6[df6["kilometer2"] == selected_km]
+km_list = sorted(df7["kilometer2"].dropna().unique().tolist())
+selected_km = st.sidebar.selectbox("Kilometer", options=["ALL"] + km_list, key="kilometer")
+df_filtered = df7 if selected_km == "ALL" else df7[df7["kilometer2"] == selected_km]
 
 # ==============================
 # DEDUPE + COUNT
@@ -146,8 +147,6 @@ else:
         )
     )
 
-# NOTE: Biarkan numeric tetap numeric untuk perhitungan/sorting,
-# tapi buat kolom display ringkas untuk ditampilkan.
 df_grouped["Min_fmt"] = df_grouped["Min"].apply(format_rupiah_ringkas)
 df_grouped["Avg_fmt"] = df_grouped["Avg"].apply(format_rupiah_ringkas)
 df_grouped["Max_fmt"] = df_grouped["Max"].apply(format_rupiah_ringkas)
@@ -160,13 +159,18 @@ st.markdown(f"**Merk = {selected_merk}**")
 st.markdown(f"**Model = {selected_model}**")
 st.markdown(f"**Transmisi = {selected_transmisi}**")
 
-# Siapkan tabel display: tampilkan yang ringkas, tapi tetap bisa simpan numeric kalau mau
 df_show = df_grouped.rename(columns={"kilometer2": "Kilometer"})
-
-# Kolom yang ditampilkan (ringkas)
 df_show = df_show[["Tipe", "Tahun", "KodeDaerah", "lokasi", "Kilometer", "Avg_fmt", "TotalUnitTerjual"]]
-df_show = df_show.rename(columns={"Min_fmt": "Min", "Avg_fmt": "Avg", "KodeDaerah": "KodeNopol", "Max_fmt": "Max", "lokasi":"LokasiLLG","TotalUnitTerjual":"UnitLLG" })
+df_show = df_show.rename(columns={
+    "Avg_fmt": "Avg",
+    "KodeDaerah": "KodeNopol",
+    "lokasi": "LokasiLLG",
+    "TotalUnitTerjual": "UnitLLG"
+})
 
-df_show = df_show.sort_values(["Tipe", "Tahun", "KodeNopol", "LokasiLLG", "Kilometer"], ascending=True)
+df_show = df_show.sort_values(
+    ["Tipe", "Tahun", "KodeNopol", "LokasiLLG", "Kilometer"],
+    ascending=True
+)
 
 st.dataframe(df_show.reset_index(drop=True), use_container_width=True)
