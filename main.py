@@ -4,16 +4,16 @@ import pandas as pd
 st.set_page_config(page_title="Harga Lelang Kendaraan", layout="wide")
 
 # Per kendaraan (1 baris unik per kombinasi ini)
-GROUP_COLS = ["Tipe", "Tahun", "Wilayah", "kilometer2"]
+GROUP_COLS = ["Tipe", "Tahun", "KodeDaerah", "lokasi","kilometer2"]
 
 # ==============================
 # HELPERS
 # ==============================
 def format_rupiah_ringkas(x) -> str:
     """
-    198000000 -> 198jt
-    1250000000 -> 1.25M
-    950000 -> 950rb
+    198000000 -> 198 juta
+    1250000000 -> 1.25 milyar
+    950000 -> 950 ribu
     """
     if pd.isna(x):
         return "-"
@@ -28,15 +28,15 @@ def format_rupiah_ringkas(x) -> str:
     if x >= 1_000_000_000:
         v = x / 1_000_000_000
         s = f"{v:.2f}".rstrip("0").rstrip(".")
-        return f"{sign}{s}M"
+        return f"{sign}{s} milyar"
     if x >= 1_000_000:
         v = x / 1_000_000
         s = f"{v:.0f}" if v.is_integer() else f"{v:.2f}".rstrip("0").rstrip(".")
-        return f"{sign}{s}jt"
+        return f"{sign}{s} juta"
     if x >= 1_000:
         v = x / 1_000
         s = f"{v:.0f}" if v.is_integer() else f"{v:.2f}".rstrip("0").rstrip(".")
-        return f"{sign}{s}rb"
+        return f"{sign}{s} ribu"
     return f"{sign}{int(x)}"
 
 
@@ -64,7 +64,7 @@ def load_data(path: str) -> pd.DataFrame:
     df["Tahun"] = pd.to_numeric(df["Tahun"], errors="coerce").astype("Int64")
 
     # Trim string
-    for c in ["Merk", "ModelName", "Tipe", "Wilayah", "kilometer2"]:
+    for c in ["Merk", "ModelName", "Tipe", "KodeDaerah", "lokasi", "kilometer2"]:
         if c in df.columns:
             df[c] = df[c].astype(str).str.strip()
 
@@ -104,13 +104,21 @@ tahun_list = sorted(df3["Tahun"].dropna().astype(int).unique().tolist())
 selected_tahun = st.sidebar.selectbox("Tahun", options=["ALL"] + tahun_list)
 df4 = df3 if selected_tahun == "ALL" else df3[df3["Tahun"] == int(selected_tahun)]
 
-wilayah_list = sorted(df4["Wilayah"].dropna().unique().tolist())
-selected_wilayah = st.sidebar.selectbox("Wilayah", options=["ALL"] + wilayah_list)
-df5 = df4 if selected_wilayah == "ALL" else df4[df4["Wilayah"] == selected_wilayah]
+transmisi_list = sorted(df4["Transmisi"].dropna().unique().tolist())
+selected_transmisi = st.sidebar.selectbox("Transmisi", options=["ALL"] + transmisi_list)
+df5 = df4 if selected_transmisi == "ALL" else df4[df4["Transmisi"] == selected_transmisi]
 
-km_list = sorted(df5["kilometer2"].dropna().unique().tolist())
+kode_daerah_list = sorted(df5["KodeDaerah"].dropna().unique().tolist())
+selected_kodeDaerah = st.sidebar.selectbox("KodeDaerah", options=["ALL"] + kode_daerah_list)
+df6 = df5 if selected_kodeDaerah == "ALL" else df5[df5["KodeDaerah"] == selected_kodeDaerah]
+
+lokasi_list = sorted(df6["lokasi"].dropna().unique().tolist())
+selected_lokasi = st.sidebar.selectbox("lokasi", options=["ALL"] + lokasi_list)
+df6 = df5 if selected_lokasi == "ALL" else df5[df5["lokasi"] == selected_lokasi]
+
+km_list = sorted(df6["kilometer2"].dropna().unique().tolist())
 selected_km = st.sidebar.selectbox("Kilometer", options=["ALL"] + km_list)
-df_filtered = df5 if selected_km == "ALL" else df5[df5["kilometer2"] == selected_km]
+df_filtered = df6 if selected_km == "ALL" else df6[df6["kilometer2"] == selected_km]
 
 # ==============================
 # DEDUPE + COUNT
@@ -150,14 +158,15 @@ df_grouped["Max_fmt"] = df_grouped["Max"].apply(format_rupiah_ringkas)
 st.title("Harga Lelang Kendaraan")
 st.markdown(f"**Merk = {selected_merk}**")
 st.markdown(f"**Model = {selected_model}**")
+st.markdown(f"**Transmisi = {selected_transmisi}**")
 
 # Siapkan tabel display: tampilkan yang ringkas, tapi tetap bisa simpan numeric kalau mau
 df_show = df_grouped.rename(columns={"kilometer2": "Kilometer"})
 
 # Kolom yang ditampilkan (ringkas)
-df_show = df_show[["Tipe", "Tahun", "Wilayah", "Kilometer", "Min_fmt", "Avg_fmt", "Max_fmt", "TotalUnitTerjual"]]
-df_show = df_show.rename(columns={"Min_fmt": "Min", "Avg_fmt": "Avg", "Max_fmt": "Max"})
+df_show = df_show[["Tipe", "Tahun", "KodeDaerah", "lokasi", "Kilometer", "Avg_fmt", "TotalUnitTerjual"]]
+df_show = df_show.rename(columns={"Min_fmt": "Min", "Avg_fmt": "Avg", "KodeDaerah": "KodeNopol", "Max_fmt": "Max", "lokasi":"LokasiLLG","TotalUnitTerjual":"UnitLLG" })
 
-df_show = df_show.sort_values(["Tipe", "Tahun", "Wilayah", "Kilometer"], ascending=True)
+df_show = df_show.sort_values(["Tipe", "Tahun", "KodeNopol", "LokasiLLG", "Kilometer"], ascending=True)
 
 st.dataframe(df_show.reset_index(drop=True), use_container_width=True)
